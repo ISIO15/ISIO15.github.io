@@ -231,7 +231,7 @@ function createManifest(chipFamily, firmwarePath) {
     };
 }
 
-// Функция для создания Blob URL из manifest
+
 function createManifestUrl(manifest) {
     const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
     return URL.createObjectURL(blob);
@@ -354,18 +354,18 @@ installButton.addEventListener('install-finished', () => {
     addLog('Установка успешно завершена!', 'success');
 });
 
-// Начальное сообщение при загрузке страницы
+
 document.addEventListener('DOMContentLoaded', () => {
     addLog('Система инициализирована. Выберите устройство и файл прошивки.', 'info');
 });
 
-// Обработка общих ошибок
+
 window.onerror = function(msg, url, lineNo, columnNo, error) {
     addLog(`Системная ошибка: ${msg}`, 'error');
     return false;
 };
 
-// Обработка непойманных обещаний
+
 window.onunhandledrejection = function(event) {
     addLog(`Необработанная ошибка: ${event.reason}`, 'error');
 };
