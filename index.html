@@ -320,22 +320,6 @@ const flashButton = document.getElementById('flash-button');
 const installButton = document.getElementById('install-button');
 <!--
 // Модифицируем функцию createManifest
-function getOffsetForChip(chip) {
-    const offsets = {
-        "ESP8266": 0x0,
-        "ESP32": 0x1000,
-        "ESP32-S2": 0x1000,
-        "ESP32-S3": 0x0,
-        "ESP32-C3": 0x0
-    };
-    return offsets[chip] || 0x0;
-}
-
-// Обновляем parts в манифесте
-parts: [{ 
-    path: firmwareUrl, 
-    offset: getOffsetForChip(selectedDevice)
-}]-->
 
 // Функция для создания manifest
 function createManifest(chipFamily, firmwarePath) {
