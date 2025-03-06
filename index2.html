@@ -150,7 +150,7 @@
         .error { color: #f44336; }
         .warning { color: #ff9800; }
     </style>
-    <!-- Стили остаются те же -->
+    
 </head>
 <body>
     <div class="container">
@@ -202,114 +202,7 @@
             <div class="log-entry">Лог прошивки:</div>
         </div>
     </div>
-<!--
-    <script>
-        let selectedDevice = null;
-        let firmwareFile = null;
-        const deviceOptions = document.querySelectorAll('.device-option');
-        const flashButton = document.getElementById('flash-button');
-        const installButton = document.getElementById('install-button');
 
-        // Функция для создания manifest
-        function createManifest(chipFamily, firmwarePath) {
-            return {
-                name: `${chipFamily} Firmware`,
-                version: "1.0",
-                new_install_prompt_erase: true,
-                builds: [
-                    {
-                        chipFamily: chipFamily,
-                        parts: [
-                            { path: firmwarePath, offset: 0 }
-                        ]
-                    }
-                ]
-            };
-        }
-
-        // Функция для создания Blob URL из manifest
-        function createManifestUrl(manifest) {
-            const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
-            return URL.createObjectURL(blob);
-        }
-
-        deviceOptions.forEach(option => {
-            option.addEventListener('click', () => {
-                deviceOptions.forEach(opt => opt.classList.remove('selected'));
-                option.classList.add('selected');
-                selectedDevice = option.dataset.chip;
-                
-                if (firmwareFile) {
-                    updateInstallButton();
-                }
-                
-                updateFlashButton();
-            });
-        });
-
-        document.getElementById('firmware').addEventListener('change', async function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            document.getElementById('file-name').textContent = file.name;
-            firmwareFile = file;
-
-            if (selectedDevice) {
-                updateInstallButton();
-            }
-            
-            updateFlashButton();
-        });
-
-        async function updateInstallButton() {
-            // Создаем URL для firmware
-            const firmwareUrl = URL.createObjectURL(firmwareFile);
-            
-            // Создаем manifest
-            const manifest = createManifest(selectedDevice, firmwareUrl);
-            
-            // Создаем URL для manifest
-            const manifestUrl = createManifestUrl(manifest);
-            
-            // Обновляем атрибут manifest у esp-web-install-button
-            installButton.manifest = manifestUrl;
-
-            // Добавляем обработчик для очистки URL после использования
-            installButton.addEventListener('closed', () => {
-                URL.revokeObjectURL(firmwareUrl);
-                URL.revokeObjectURL(manifestUrl);
-            }, { once: true });
-        }
-
-        function updateFlashButton() {
-            flashButton.disabled = !selectedDevice || !firmwareFile;
-            flashButton.textContent = flashButton.disabled ? 
-                'Выберите устройство и прошивку' : 
-                `Прошить ${selectedDevice}`;
-        }
-
-        function addLog(message, type = 'info') {
-            const logPanel = document.getElementById('log-panel');
-            const logEntry = document.createElement('div');
-            logEntry.className = `log-entry ${type}`;
-            logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-            logPanel.appendChild(logEntry);
-            logPanel.scrollTop = logPanel.scrollHeight;
-        }
-
-        // Добавляем обработчики событий для логирования
-        installButton.addEventListener('esp-web-install-error', (e) => {
-            addLog(`Ошибка: ${e.detail.error}`, 'error');
-        });
-
-        installButton.addEventListener('esp-web-install-progress', (e) => {
-            addLog(`Прогресс: ${e.detail.progress}%`);
-        });
-
-        installButton.addEventListener('esp-web-install-success', () => {
-            addLog('Прошивка успешно завершена!', 'success');
-        });
-    </script>-->
     
     <script>
    
@@ -318,10 +211,7 @@ let firmwareFile = null;
 const deviceOptions = document.querySelectorAll('.device-option');
 const flashButton = document.getElementById('flash-button');
 const installButton = document.getElementById('install-button');
-<!--
-// Модифицируем функцию createManifest
 
-// Функция для создания manifest
 function createManifest(chipFamily, firmwarePath) {
     return {
         name: `${chipFamily} Firmware`,
