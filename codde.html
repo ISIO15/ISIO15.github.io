@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP-MONSTER Flasher [DUAL MODE]</title>
+    <script type="module" src="https://unpkg.com/esp-web-tools@9.4.3/dist/web/install-button.js?module"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-color: #05020a; --primary-green: #00ff7f; --accent-purple: #9400d3; --text-color: #e0e0e0;
+            --border-color: rgba(148, 0, 211, 0.4); --shadow-green: rgba(0, 255, 127, 0.5); --shadow-purple: rgba(148, 0, 211, 0.6);
+            --container-bg: rgba(10, 5, 20, 0.85); --error-color: #ff4757; --warning-color: #ffa502;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { font-size: 16px; }
+        body { background-color: var(--bg-color); color: var(--text-color); font-family: 'Share Tech Mono', monospace; display: flex; flex-direction: column; min-height: 100vh; width: 100%; overflow-x: hidden; }
+        .background-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; background: linear-gradient(rgba(10, 5, 20, 0.9), rgba(10, 5, 20, 0.9)), url('https://www.transparenttextures.com/patterns/carbon-fibre.png'); }
+        .background-overlay::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(rgba(148, 0, 211, 0.1) 1px, transparent 1px); background-size: 1px 3px; animation: scanline 10s linear infinite; opacity: 0.5; }
+        @keyframes scanline { 0% { background-position-y: 0; } 100% { background-position-y: 100vh; } }
+        .container { width: 100%; max-width: 1100px; margin: auto; display: flex; flex-direction: column; flex-grow: 1; padding: 1rem; }
+        .main-header { text-align: center; padding: 2rem 1rem; border-bottom: 1px solid var(--border-color); }
+        #logo-placeholder { font-size: 3rem; font-weight: bold; color: var(--primary-green); margin-bottom: 0.5rem; text-shadow: 0 0 10px var(--primary-green), 0 0 20px var(--primary-green); }
+        h1 { color: var(--primary-green); text-shadow: 0 0 5px var(--shadow-green); letter-spacing: 2px; font-size: clamp(1.8rem, 5vw, 2.5rem); }
+        .subtitle { color: var(--text-color); opacity: 0.8; margin-top: 0.5rem; font-size: clamp(0.9rem, 2.5vw, 1.1rem); }
+        .tabs { display: flex; background-color: rgba(0,0,0,0.3); width: 100%; }
+        .tab-button { flex: 1; padding: 1rem 0.5rem; font-family: 'Share Tech Mono', monospace; font-size: 1rem; color: var(--text-color); background-color: transparent; border: none; border-bottom: 3px solid transparent; cursor: pointer; transition: all 0.3s ease; outline: none; white-space: nowrap; }
+        .tab-button:hover { background-color: rgba(148, 0, 211, 0.2); }
+        .tab-button.active { color: var(--primary-green); border-bottom-color: var(--primary-green); text-shadow: 0 0 8px var(--shadow-green); }
+        .content-wrapper { background-color: var(--container-bg); border: 1px solid var(--border-color); border-top: none; border-radius: 0 0 8px 8px; flex-grow: 1; padding: 1.5rem; }
+        .tab-content { display: none; animation: fadeIn 0.5s ease-in-out; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        h2, h3 { margin-bottom: 1rem; color: var(--accent-purple); border-left: 4px solid var(--accent-purple); padding-left: 10px; }
+        p { line-height: 1.6; margin-bottom: 1rem; }
+        .section-block { padding: 1.5rem; border: 1px solid var(--border-color); border-radius: 8px; background: rgba(0,0,0,0.2); margin-bottom: 1.5rem; }
+        
+        .mode-selector { display: flex; gap: 1rem; margin-bottom: 2rem; }
+        .mode-select-btn { flex-grow: 1; padding: 1rem; font-family: 'Share Tech Mono', monospace; font-size: 1.1rem; color: var(--text-color); background-color: rgba(148, 0, 211, 0.15); border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; transition: all 0.3s ease; text-align: center; }
+        .mode-select-btn:hover { background-color: rgba(148, 0, 211, 0.3); }
+        .mode-select-btn.active { background-color: transparent; border-color: var(--primary-green); color: var(--primary-green); box-shadow: 0 0 15px var(--shadow-green); }
+        
+        .mode-content { display: none; }
+        .mode-content.active { display: block; }
+        
+        .option-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
+        .grid-option { padding: 1rem; background: transparent; border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; transition: all 0.3s ease; text-align: center; }
+        .grid-option:hover { border-color: var(--primary-green); color: var(--primary-green); transform: translateY(-2px); }
+        .grid-option.selected { border-color: var(--primary-green); background: rgba(0, 255, 127, 0.1); color: var(--primary-green); box-shadow: 0 0 10px var(--shadow-green); }
+
+        .custom-file-upload { display: inline-block; padding: 0.8rem 1.5rem; background: transparent; color: var(--primary-green); border: 1px solid var(--primary-green); border-radius: 4px; cursor: pointer; transition: all 0.3s ease; }
+        .custom-file-upload:hover { background: rgba(0, 255, 127, 0.1); box-shadow: 0 0 10px var(--shadow-green); }
+        #file-name { margin-top: 1rem; color: var(--text-color); opacity: 0.8; word-break: break-all; }
+        #flash-button { display: block; width: 100%; padding: 1rem; margin-top: 1.5rem; background: var(--primary-green); color: var(--bg-color); border: none; border-radius: 4px; cursor: pointer; font-size: 1.2rem; font-weight: bold; font-family: 'Share Tech Mono', monospace; transition: all 0.3s ease; }
+        #flash-button:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 4px 20px var(--shadow-green); }
+        #flash-button:disabled { background: #555; color: #999; cursor: not-allowed; transform: none; box-shadow: none; }
+        #log-panel { margin-top: 1.5rem; padding: 1rem; background-color: rgba(0,0,0,0.5); border: 1px solid var(--border-color); border-radius: 4px; min-height: 200px; max-height: 400px; overflow-y: auto; font-size: 0.9rem; }
+        .log-entry { margin: 5px 0; color: #a0a0a0; } .log-entry.success { color: var(--primary-green); } .log-entry.error { color: var(--error-color); } .log-entry.warning { color: var(--warning-color); }
+        
+        .slider { position: relative; width: 100%; margin: 1.5rem auto 0; } .slider-window { overflow: hidden; border-radius: 8px; border: 1px solid var(--border-color); aspect-ratio: 16 / 9; } .slider-track { display: flex; height: 100%; } .slide { min-width: 100%; flex-shrink: 0; opacity: 0.7; transform: scale(0.95); transition: opacity 0.5s ease, transform 0.5s ease; position: relative; } .slide.active-slide { opacity: 1; transform: scale(1); } .slide img { width: 100%; height: 100%; object-fit: cover; display: block; } .slider-btn { position: absolute; top: 50%; transform: translateY(-50%); background-color: rgba(10, 5, 20, 0.7); border: 1px solid var(--border-color); color: var(--primary-green); font-size: 2rem; cursor: pointer; width: 45px; height: 45px; border-radius: 50%; display: flex; justify-content: center; align-items: center; transition: all 0.3s ease; user-select: none; z-index: 10; } .slider-btn:hover { background-color: var(--accent-purple); color: #fff; } .slider-btn.prev { left: 10px; } .slider-btn.next { right: 10px; }
+        footer { text-align: center; padding: 1.5rem 1rem; font-size: 0.8rem; color: var(--text-color); opacity: 0.5; border-top: 1px solid var(--border-color); margin-top: auto; }
+        
+        /* === СТИЛИ ДЛЯ КНОПКИ TELEGRAM И МОДАЛЬНОГО ОКНА === */
+        .telegram-button { position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(45deg, #9400d3, #7b2cbf); display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 0 20px var(--shadow-purple); transition: all 0.3s ease; z-index: 999; animation: float 3s ease-in-out infinite; }
+        .telegram-button:hover { transform: scale(1.1); box-shadow: 0 0 30px var(--shadow-purple); }
+        .telegram-button svg { color: white; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.5)); }
+        @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0px); } }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); z-index: 1000; animation: fadeInModal 0.3s ease; }
+        .modal-content { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(10, 5, 20, 0.95); padding: 30px; border-radius: 20px; max-width: 500px; width: 90%; box-shadow: 0 0 30px var(--shadow-purple), inset 0 0 20px rgba(148, 0, 211, 0.3); animation: modalSlide 0.5s ease; z-index: 1001; border: 1px solid var(--border-color); }
+        .channels-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; margin-top: 20px; }
+        .channel-button { background: linear-gradient(45deg, #9400d3, #7b2cbf); color: white; padding: 12px 20px; border-radius: 15px; text-decoration: none; text-align: center; transition: all 0.3s ease; box-shadow: 0 0 15px rgba(148, 0, 211, 0.3); display: flex; align-items: center; justify-content: center; gap: 10px; font-family: 'Share Tech Mono', monospace; }
+        .channel-button:hover { transform: translateY(-3px); box-shadow: 0 0 25px rgba(148, 0, 211, 0.5); }
+        .modal-title { color: #fff; text-align: center; margin-bottom: 20px; font-size: 1.5em; text-shadow: 0 0 10px var(--shadow-purple); }
+        @keyframes fadeInModal { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes modalSlide { from { transform: translate(-50%, -60%); opacity: 0; } to { transform: translate(-50%, -50%); opacity: 1; } }
+        
+        /* === НОВЫЕ СТИЛИ ДЛЯ ВЕРСИЙ ПРОШИВОК === */
+        .latest-version {
+            position: relative;
+            border: 1px solid var(--primary-green) !important;
+            box-shadow: 0 0 15px var(--shadow-green) !important;
+            background: rgba(0, 255, 127, 0.05) !important;
+            order: -1; /* Всегда первая в сетке */
+        }
+        .version-badge {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background: var(--primary-green);
+            color: var(--bg-color);
+            font-size: 0.7rem;
+            font-weight: bold;
+            padding: 3px 8px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px var(--shadow-green);
+            z-index: 2;
+            transform: scale(1);
+            animation: pulse-badge 2s infinite;
+        }
+        @keyframes pulse-badge {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        .firmware-version {
+            display: block;
+            font-size: 0.85rem;
+            margin-top: 5px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        .loader {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0, 255, 127, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--primary-green);
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .loading-message {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            color: var(--text-color);
+        }
+        .firmware-info {
+            margin-top: 10px;
+            font-size: 0.8rem;
+            color: var(--text-color);
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="background-overlay"></div>
+    <div class="container">
+        <header class="main-header">
+            <div id="logo-placeholder">ESP-M</div>
+            <h1>ESP-MONSTER Flasher</h1>
+            <p class="subtitle">Универсальный прошивальщик для кацкерских девайсов</p>
+        </header>
+        <main>
+            <nav class="tabs">
+                <button class="tab-button active" data-tab="tab1">Прошивка</button>
+                <button class="tab-button" data-tab="tab2">Инструкция</button>
+                <button class="tab-button" data-tab="tab3">О проекте</button>
+            </nav>
+            <div class="content-wrapper">
+                <!-- ВКЛАДКА 1: ПРОШИВКА -->
+                <div id="tab1" class="tab-content active">
+                    <div class="mode-selector">
+                        <button id="select-auto-mode" class="mode-select-btn active">Режим "ESP-MONSTER"</button>
+                        <button id="select-manual-mode" class="mode-select-btn">Ручной режим</button>
+                    </div>
+
+                    <div id="auto-mode-content" class="mode-content active">
+                        <div class="section-block">
+                            <h3>1. Выберите готовую прошивку:</h3>
+                            <p>Выберите одну из официальных сборок. Файлы будут загружены из локальной папки <code>/bins</code> на сервере.</p>
+                            <div class="option-grid" id="auto-firmware-grid">
+                                <div class="loading-message">
+                                    <div class="loader"></div>
+                                    <span>Загрузка списка прошивок...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="manual-mode-content" class="mode-content">
+                        <div class="section-block device-selector">
+                            <h3>1. Выберите ваше устройство:</h3>
+                            <div class="option-grid" id="manual-device-grid">
+                                <div class="grid-option" data-chip="ESP32">ESP32</div>
+                                <div class="grid-option" data-chip="ESP32-S2">ESP32-S2</div>
+                                <div class="grid-option" data-chip="ESP32-S3">ESP32-S3</div>
+                                <div class="grid-option" data-chip="ESP32-C3">ESP32-C3</div>
+                                <div class="grid-option" data-chip="ESP8266">ESP8266/D1 Mini</div>
+                                <div class="grid-option" data-chip="ESP32-S3">M5 Cardputer</div>
+                                <div class="grid-option" data-chip="ESP32">M5StickC/Plus</div>
+                                <div class="grid-option" data-chip="ESP32-S3">AtomS3</div>
+                            </div>
+                        </div>
+                        <div class="section-block upload-section">
+                            <h3>2. Выберите файл прошивки (.bin):</h3>
+                            <input type="file" id="firmware-manual-input" accept=".bin" style="display: none">
+                            <label for="firmware-manual-input" class="custom-file-upload">Выбрать файл</label>
+                            <div id="file-name">Файл не выбран...</div>
+                        </div>
+                    </div>
+                    
+                    <h3>Подключите и прошейте:</h3>
+                    <esp-web-install-button id="install-button">
+                        <button slot="activate" id="flash-button" disabled>Выберите режим и опции</button>
+                    </esp-web-install-button>
+
+                    <div id="log-panel"></div>
+                </div>
+
+                <!-- ВКЛАДКА 2: ИНСТРУКЦИЯ -->
+                <div id="tab2" class="tab-content">
+                    <h2>Пошаговая инструкция</h2>
+                    <div class="slider">
+                        <div class="slider-window">
+                            <div class="slider-track">
+                                <div class="slide active-slide"><img src="https://placehold.co/800x450/0a0514/00ff7f?text=Шаг+1:+Подключи+USB" alt="Шаг 1"></div>
+                                <div class="slide"><img src="https://placehold.co/800x450/0a0514/9400d3?text=Шаг+2:+Выбери+режим" alt="Шаг 2"></div>
+                                <div class="slide"><img src="https://placehold.co/800x450/0a0514/00ff7f?text=Шаг+3:+Нажми+'Прошить'" alt="Шаг 3"></div>
+                            </div>
+                        </div>
+                        <button class="slider-btn prev">&#10094;</button>
+                        <button class="slider-btn next">&#10095;</button>
+                    </div>
+                </div>
+
+                <!-- ВКЛАДКА 3: О ПРОЕКТЕ -->
+                <div id="tab3" class="tab-content">
+                     <h2>О проекте ESP-MONSTER</h2>
+                    <p>ESP-MONSTER - это мощная платформа на базе ESP32, созданная для энтузиастов и исследователей безопасности.</p>
+                </div>
+            </div>
+        </main>
+        <footer><p>&copy; 2024. Created for katzkers by a katzker.</p></footer>
+    </div>
+    
+    <!-- HTML ДЛЯ КНОПКИ TELEGRAM И МОДАЛЬНОГО ОКНА -->
+    <a href="#" class="telegram-button" id="showChannelsBtn">
+        <svg viewBox="0 0 24 24" width="24" height="24">
+            <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.11.02-1.93 1.23-5.46 3.62-.51.35-.98.52-1.4.51-.46-.01-1.35-.26-2.01-.48-.81-.27-1.46-.42-1.4-.88.03-.25.38-.51 1.07-.78 4.2-1.82 7-3.03 8.4-3.61.17-.06 1.6-.55 2.12.33.52.87-.24 1.74-.4 1.9z"/>
+        </svg>
+    </a>
+    <div class="modal-overlay" id="channelsModal">
+        <div class="modal-content">
+            <h2 class="modal-title">Наши Telegram каналы</h2>
+            <div class="channels-grid"></div>
+        </div>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // === ОСНОВНЫЕ ЭЛЕМЕНТЫ ===
+    const installButton = document.getElementById('install-button');
+    const flashButton = document.getElementById('flash-button');
+    const logPanel = document.getElementById('log-panel');
+    const selectAutoModeBtn = document.getElementById('select-auto-mode');
+    const selectManualModeBtn = document.getElementById('select-manual-mode');
+    const autoModeContent = document.getElementById('auto-mode-content');
+    const manualModeContent = document.getElementById('manual-mode-content');
+    const autoFirmwareGrid = document.getElementById('auto-firmware-grid');
+
+    let currentMode = 'auto';
+    let selectedChip = null;
+    let firmwareSource = null;
+    let availableFirmwares = [];
+
+    // === ФУНКЦИИ ДЛЯ РАБОТЫ С ВЕРСИЯМИ ПРОШИВОК ===
+    
+    // Парсинг версии из имени файла
+    const parseVersion = (filename) => {
+        // Поддерживаем разные форматы имен файлов с версиями
+        const patterns = [
+            /firm_(\d+)\.(\d+)\.(\d+)\.bin/i,         // firm_1.2.3.bin
+            /firmware[_-]v?(\d+)\.(\d+)\.(\d+)\.bin/i, // firmware_1.2.3.bin или firmware-v1.2.3.bin
+            /v?(\d+)\.(\d+)\.(\d+)\.bin$/i,            // v1.2.3.bin или просто 1.2.3.bin
+            /esp.*?[_-]?(\d+)\.(\d+)\.(\d+)\.bin$/i    // esp32_1.2.3.bin или esp-monster-1.2.3.bin
+        ];
+        
+        for (const pattern of patterns) {
+            const match = filename.match(pattern);
+            if (match) {
+                return {
+                    major: parseInt(match[1], 10),
+                    minor: parseInt(match[2], 10),
+                    patch: parseInt(match[3], 10),
+                    full: `${match[1]}.${match[2]}.${match[3]}`
+                };
+            }
+        }
+        return null;
+    };
+    
+    // Сравнение версий (для сортировки)
+    const compareVersions = (versionA, versionB) => {
+        if (!versionA) return 1;  // Null версии в конец
+        if (!versionB) return -1;
+        
+        // Сравниваем версии: сначала major, потом minor, потом patch
+        if (versionA.major !== versionB.major) return versionB.major - versionA.major;
+        if (versionA.minor !== versionB.minor) return versionB.minor - versionA.minor;
+        return versionB.patch - versionA.patch;
+    };
+    
+    // Определение типа чипа из имени файла
+    const guessChipFromFilename = (filename) => {
+        const lcFilename = filename.toLowerCase();
+        if (lcFilename.includes('esp32-s3') || lcFilename.includes('esp32s3')) return 'ESP32-S3';
+        if (lcFilename.includes('esp32-s2') || lcFilename.includes('esp32s2')) return 'ESP32-S2';
+        if (lcFilename.includes('esp32-c3') || lcFilename.includes('esp32c3')) return 'ESP32-C3';
+        if (lcFilename.includes('esp8266')) return 'ESP8266';
+        if (lcFilename.includes('esp32')) return 'ESP32';
+        return 'ESP32'; // По умолчанию
+    };
+
+    // === ЛОГГИРОВАНИЕ И ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ===
+    
+    const addLog = (message, type = 'info') => {
+        const entry = document.createElement('div');
+        entry.className = `log-entry ${type}`;
+        const timestamp = new Date().toLocaleTimeString();
+        entry.textContent = `[${timestamp}] ${message}`;
+        logPanel.appendChild(entry);
+        logPanel.scrollTop = logPanel.scrollHeight;
+    };
+    
+    const createManifest = (chipFamily, firmwarePath) => {
+        return {
+            name: `Firmware for ${chipFamily}`,
+            version: new Date().toLocaleDateString(),
+            new_install_prompt_erase: true,
+            builds: [{
+                chipFamily: chipFamily,
+                parts: [{ path: firmwarePath, offset: 0 }]
+            }]
+        };
+    };
+
+    const createManifestUrl = (manifest) => {
+        const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+        return URL.createObjectURL(blob);
+    };
+
+    const updateFlashButtonState = () => {
+        if (selectedChip && firmwareSource) {
+            flashButton.disabled = false;
+            flashButton.textContent = `Прошить на ${selectedChip}`;
+        } else {
+            flashButton.disabled = true;
+            if (currentMode === 'auto') {
+                flashButton.textContent = 'Выберите прошивку';
+            } else {
+                flashButton.textContent = 'Выберите устройство и файл';
+            }
+        }
+    };
+    
+    const resetSelection = () => {
+        selectedChip = null;
+        firmwareSource = null;
+        installButton.manifest = null;
+        document.querySelectorAll('.grid-option.selected').forEach(el => el.classList.remove('selected'));
+        document.getElementById('file-name').textContent = 'Файл не выбран...';
+        updateFlashButtonState();
+    };
+
+    // === ЗАГРУЗКА СПИСКА ПРОШИВОК ===
+    
+    // Получение списка файлов из директории bins
+    const scanBinsDirectory = async () => {
+        try {
+            // Способ 1: Пробуем напрямую получить листинг директории
+            const response = await fetch('bins/');
+            if (!response.ok) {
+                throw new Error('Не удалось получить список файлов');
+            }
+            
+            const html = await response.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            
+            // Извлекаем ссылки на .bin файлы
+            const binFiles = [];
+            doc.querySelectorAll('a').forEach(a => {
+                const href = a.getAttribute('href');
+                if (href && href.toLowerCase().endsWith('.bin')) {
+                    const filename = href.split('/').pop();
+                    binFiles.push({
+                        name: filename,
+                        path: `bins/${filename}`,
+                        chip: guessChipFromFilename(filename)
+                    });
+                }
+            });
+            
+            if (binFiles.length === 0) {
+                throw new Error('Не найдено .bin файлов в директории');
+            }
+            
+            return binFiles;
+        } catch (error) {
+            console.warn('Ошибка при сканировании директории:', error);
+            
+            // Способ 2 (резервный): Используем запросы к каждому потенциальному файлу
+            // Находим все файлы, которые могут существовать в папке bins
+            // Это не очень эффективно, но может сработать, если сервер не поддерживает
+            // листинг директорий
+            
+            addLog('Не удалось получить список файлов напрямую. Пробуем альтернативный метод...', 'warning');
+            
+            // Пробуем найти конкретные файлы в папке bins
+            const filesToCheck = [
+                'firm_1.0.0.bin', 'firm_1.0.1.bin', 'firm_1.1.0.bin', 'firm_2.0.0.bin', 
+                'firm_2.1.0.bin', 'firm_2.1.3.bin', 'firm_3.0.0.bin', 'esp-monster-esp32.bin', 
+                'esp-monster-esp32s3.bin', 'esp32.bin', 'esp32s3.bin'
+            ];
+            
+            const foundFiles = [];
+            
+            for (const file of filesToCheck) {
+                try {
+                    const resp = await fetch(`bins/${file}`, { method: 'HEAD' });
+                    if (resp.ok) {
+                        foundFiles.push({
+                            name: file,
+                            path: `bins/${file}`,
+                            chip: guessChipFromFilename(file)
+                        });
+                    }
+                } catch (e) {
+                    // Игнорируем ошибки
+                }
+            }
+            
+            if (foundFiles.length > 0) {
+                return foundFiles;
+            }
+            
+            // Способ 3 (запасной): Возвращаем заранее заданный список
+            return [
+                { name: "ESP-MONSTER для ESP32", chip: "ESP32", path: "bins/esp-monster-esp32.bin" },
+                { name: "ESP-MONSTER для ESP32-S3", chip: "ESP32-S3", path: "bins/esp-monster-esp32s3.bin" },
+                { name: "Firmware v2.1.3", chip: "ESP32", path: "bins/firm_2.1.3.bin" },
+                { name: "Firmware v1.9.5", chip: "ESP32", path: "bins/firm_1.9.5.bin" },
+                { name: "Firmware v2.0.0", chip: "ESP32", path: "bins/firm_2.0.0.bin" }
+            ];
+        }
+    };
+    
+    // Загрузка и отображение списка прошивок
+    const loadAndDisplayFirmwares = async () => {
+        autoFirmwareGrid.innerHTML = `
+            <div class="loading-message">
+                <div class="loader"></div>
+                <span>Загрузка списка прошивок...</span>
+            </div>
+        `;
+        
+        try {
+            // Получаем список файлов
+            const firmwares = await scanBinsDirectory();
+            
+            // Добавляем информацию о версии к каждой прошивке
+            firmwares.forEach(fw => {
+                const filename = fw.path.split('/').pop();
+                fw.version = parseVersion(filename);
+                
+                // Если в имени отсутствует читаемое название, делаем более дружественное имя
+                if (fw.name === filename) {
+                    let displayName = "Прошивка";
+                    if (fw.name.toLowerCase().includes('esp32-s3') || fw.name.toLowerCase().includes('esp32s3')) {
+                        displayName = "Прошивка ESP32-S3";
+                    } else if (fw.name.toLowerCase().includes('esp32')) {
+                        displayName = "Прошивка ESP32";
+                    } else if (fw.name.toLowerCase().includes('esp8266')) {
+                        displayName = "Прошивка ESP8266";
+                    }
+                    fw.displayName = displayName;
+                } else {
+                    fw.displayName = fw.name;
+                }
+            });
+            
+            // Сортируем по версиям (новые сверху)
+            firmwares.sort((a, b) => {
+                return compareVersions(a.version, b.version);
+            });
+            
+            // Сохраняем отсортированный список
+            availableFirmwares = firmwares;
+            
+            // Помечаем самую новую версию
+            if (firmwares.length > 0) {
+                firmwares[0].isLatest = true;
+            }
+            
+            // Отображаем прошивки
+            renderFirmwareGrid(firmwares);
+            
+            addLog(`Найдено ${firmwares.length} прошивок`, 'success');
+            if (firmwares.length > 0 && firmwares[0].version) {
+                addLog(`Последняя версия: ${firmwares[0].version.full}`, 'info');
+            }
+            
+        } catch (error) {
+            autoFirmwareGrid.innerHTML = `
+                <div class="error-message">
+                    Ошибка при загрузке списка прошивок: ${error.message}
+                </div>
+            `;
+            addLog(`Ошибка: ${error.message}`, 'error');
+        }
+    };
+    
+    // Отображение списка прошивок в сетке
+    const renderFirmwareGrid = (firmwares) => {
+        autoFirmwareGrid.innerHTML = '';
+        
+        if (firmwares.length === 0) {
+            autoFirmwareGrid.innerHTML = '<div class="no-firmware-message">Прошивки не найдены</div>';
+            return;
+        }
+        
+        firmwares.forEach(fw => {
+            const btn = document.createElement('div');
+            btn.className = 'grid-option';
+            
+            if (fw.isLatest) {
+                btn.classList.add('latest-version');
+            }
+            
+            // Формируем содержимое элемента
+            let displayName = fw.displayName || fw.name;
+            
+            let versionText = '';
+            if (fw.version) {
+                // Если версия уже включена в имя, не дублируем
+                if (!displayName.includes(fw.version.full)) {
+                    versionText = `<span class="firmware-version">v${fw.version.full}</span>`;
+                }
+            }
+            
+            btn.innerHTML = `
+                ${fw.isLatest ? '<span class="version-badge">НОВАЯ</span>' : ''}
+                <div>${displayName}</div>
+                ${versionText}
+                <div class="firmware-info">${fw.chip}</div>
+            `;
+            
+            btn.dataset.chip = fw.chip;
+            btn.dataset.path = fw.path;
+            btn.dataset.version = fw.version ? fw.version.full : '';
+            
+            btn.addEventListener('click', () => {
+                // Снимаем выделение со всех кнопок
+                document.querySelectorAll('#auto-firmware-grid .grid-option').forEach(el => 
+                    el.classList.remove('selected')
+                );
+                
+                // Выделяем выбранную кнопку
+                btn.classList.add('selected');
+                
+                // Устанавливаем выбранные параметры
+                selectedChip = fw.chip;
+                firmwareSource = fw.path;
+                
+                // Логируем выбор
+                let logMessage = `Выбрана прошивка: ${displayName}`;
+                if (fw.version) {
+                    logMessage += ` (v${fw.version.full})`;
+                }
+                if (fw.isLatest) {
+                    logMessage += ' - последняя версия';
+                }
+                addLog(logMessage, 'info');
+                
+                // Создаем манифест для прошивки
+                const manifest = createManifest(selectedChip, firmwareSource);
+                installButton.manifest = createManifestUrl(manifest);
+                addLog('Манифест для прошивки сгенерирован', 'success');
+                
+                // Обновляем состояние кнопки прошивки
+                updateFlashButtonState();
+            });
+            
+            autoFirmwareGrid.appendChild(btn);
+        });
+    };
+    
+    // === ПЕРЕКЛЮЧЕНИЕ РЕЖИМОВ ===
+    
+    const switchMode = (newMode) => {
+        currentMode = newMode;
+        resetSelection();
+        logPanel.innerHTML = '';
+
+        if (newMode === 'auto') {
+            selectAutoModeBtn.classList.add('active');
+            selectManualModeBtn.classList.remove('active');
+            autoModeContent.classList.add('active');
+            manualModeContent.classList.remove('active');
+            addLog("Активирован режим 'ESP-MONSTER'. Выберите готовую сборку.", "info");
+            
+            // Загружаем список прошивок
+            loadAndDisplayFirmwares();
+        } else {
+            selectAutoModeBtn.classList.remove('active');
+            selectManualModeBtn.classList.add('active');
+            autoModeContent.classList.remove('active');
+            manualModeContent.classList.add('active');
+            addLog("Активирован 'Ручной режим'. Выберите устройство и .bin файл.", "info");
+        }
+    };
+
+    selectAutoModeBtn.addEventListener('click', () => switchMode('auto'));
+    selectManualModeBtn.addEventListener('click', () => switchMode('manual'));
+    
+    // === РУЧНОЙ РЕЖИМ ===
+    
+    const manualDeviceGrid = document.getElementById('manual-device-grid');
+    const firmwareInput = document.getElementById('firmware-manual-input');
+    const fileNameEl = document.getElementById('file-name');
+
+    manualDeviceGrid.querySelectorAll('.grid-option').forEach(option => {
+        option.addEventListener('click', () => {
+            manualDeviceGrid.querySelectorAll('.grid-option').forEach(opt => opt.classList.remove('selected'));
+            option.classList.add('selected');
+            selectedChip = option.dataset.chip;
+            addLog(`Выбрано устройство: ${selectedChip}`, 'info');
+            updateFlashButtonState();
+        });
+    });
+
+    firmwareInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) {
+            firmwareSource = null;
+            fileNameEl.textContent = 'Файл не выбран...';
+        } else {
+            firmwareSource = file;
+            fileNameEl.textContent = file.name;
+            
+            // Пытаемся определить версию из имени файла
+            const version = parseVersion(file.name);
+            if (version) {
+                addLog(`Выбран файл: ${file.name} (версия ${version.full})`, 'info');
+            } else {
+                addLog(`Выбран файл: ${file.name}`, 'info');
+            }
+            
+            // Генерируем манифест
+            if (selectedChip) {
+                const manifest = createManifest(selectedChip, URL.createObjectURL(firmwareSource));
+                installButton.manifest = createManifestUrl(manifest);
+                addLog("Манифест для ручного режима сгенерирован.", "success");
+            }
+        }
+        updateFlashButtonState();
+    });
+    
+    // === СОБЫТИЯ ПРОШИВКИ ===
+
+    installButton.addEventListener("error", (e) => addLog(`ОШИБКА: ${e.detail.message}`, "error"));
+    installButton.addEventListener("connected", () => addLog("Устройство успешно подключено.", "success"));
+    installButton.addEventListener("progress", (e) => addLog(`Запись... ${Math.round(e.detail.progress * 100)}%`));
+    installButton.addEventListener("finished", () => addLog("Прошивка успешно завершена!", "success"));
+    installButton.addEventListener("disconnected", () => addLog("Устройство отключено."));
+    
+    // === НАВИГАЦИЯ ПО ВКЛАДКАМ ===
+    
+    document.querySelectorAll('.tab-button').forEach(button => button.onclick = () => {
+        document.querySelectorAll('.tab-button, .tab-content').forEach(el => el.classList.remove('active'));
+        button.classList.add('active');
+        document.getElementById(button.dataset.tab)?.classList.add('active');
+    });
+    
+    // === СЛАЙДЕР В ИНСТРУКЦИИ ===
+
+    const slider = document.querySelector('.slider');
+    if (slider) {
+        const track = slider.querySelector('.slider-track');
+        const slides = Array.from(track.children);
+        let currentIndex = 0;
+        const updateSlides = () => {
+            slides.forEach((slide, index) => slide.classList.toggle('active-slide', index === currentIndex));
+            track.style.transform = `translateX(-${currentIndex * 100}%)`;
+        };
+        slider.querySelector('.next').onclick = () => { currentIndex = (currentIndex + 1) % slides.length; updateSlides(); };
+        slider.querySelector('.prev').onclick = () => { currentIndex = (currentIndex - 1 + slides.length) % slides.length; updateSlides(); };
+    }
+    
+    // === ЛОГИКА КНОПКИ TELEGRAM ===
+    
+    const modal = document.getElementById('channelsModal');
+    const showChannelsBtn = document.getElementById('showChannelsBtn');
+    const channelsGrid = modal.querySelector('.channels-grid');
+    
+    const channels = [
+        'https://t.me/m5stick_loni2',
+        'https://t.me/+QFjtYcgb7J9jYTJi',
+        'https://t.me/deautherrr'
+    ];
+
+    const createChannelButtons = () => {
+        channelsGrid.innerHTML = channels.map(channel => {
+            let channelName = channel.replace('https://t.me/', '');
+            if (channelName === "+QFjtYcgb7J9jYTJi") {
+                channelName = "Палка 2.0";
+            }
+            return `
+                <a href="${channel}" class="channel-button" target="_blank">
+                    <svg viewBox="0 0 24 24" width="20" height="20">
+                        <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.11.02-1.93 1.23-5.46 3.62-.51.35-.98.52-1.4.51-.46-.01-1.35-.26-2.01-.48-.81-.27-1.46-.42-1.4-.88.03-.25.38-.51 1.07-.78 4.2-1.82 7-3.03 8.4-3.61.17-.06 1.6-.55 2.12.33.52.87-.24 1.74-.4 1.9z"/>
+                    </svg>
+                    ${channelName}
+                </a>
+            `;
+        }).join('');
+    };
+
+    createChannelButtons();
+
+    showChannelsBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        modal.style.display = 'block';
+    });
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+
+    // === ЗАГРУЗКА СПИСКА ПРОШИВОК ПРИ СТАРТЕ ===
+    switchMode('auto');
+});
+</script>
+
+</body>
+</html>
