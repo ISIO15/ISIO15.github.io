@@ -47,9 +47,37 @@
         .mode-content.active { display: block; }
 
         .option-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
-        .grid-option { padding: 1rem; background: transparent; border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; transition: all 0.3s ease; text-align: center; }
+        .grid-option { padding: 1rem; background: transparent; border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; transition: all 0.3s ease; text-align: center; position: relative; }
         .grid-option:hover { border-color: var(--primary-green); color: var(--primary-green); transform: translateY(-2px); }
         .grid-option.selected { border-color: var(--primary-green); background: rgba(0, 255, 127, 0.1); color: var(--primary-green); box-shadow: 0 0 10px var(--shadow-green); }
+      
+        
+          .selection-checkmark {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    width: 24px;
+    height: 24px;
+    background-color: var(--primary-green);
+    color: var(--bg-color);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    font-size: 16px;
+    transform: scale(0);
+    opacity: 0;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s;
+    z-index: 3;
+    box-shadow: 0 0 10px var(--shadow-green);
+}
+
+.grid-option.selected .selection-checkmark {
+    transform: scale(1);
+    opacity: 1;
+}
+              
 
         .custom-file-upload { display: inline-block; padding: 0.8rem 1.5rem; background: transparent; color: var(--primary-green); border: 1px solid var(--primary-green); border-radius: 4px; cursor: pointer; transition: all 0.3s ease; }
         .custom-file-upload:hover { background: rgba(0, 255, 127, 0.1); box-shadow: 0 0 10px var(--shadow-green); }
@@ -59,6 +87,19 @@
         #flash-button:disabled { background: #555; color: #999; cursor: not-allowed; transform: none; box-shadow: none; }
         #log-panel { margin-top: 1.5rem; padding: 1rem; background-color: rgba(0,0,0,0.5); border: 1px solid var(--border-color); border-radius: 4px; min-height: 200px; max-height: 400px; overflow-y: auto; font-size: 0.9rem; }
         .log-entry { margin: 5px 0; color: #a0a0a0; } .log-entry.success { color: var(--primary-green); } .log-entry.error { color: var(--error-color); } .log-entry.warning { color: var(--warning-color); }
+
+
+.log-manifest-details {
+    background-color: rgba(0, 255, 127, 0.05);
+    border: 1px solid rgba(0, 255, 127, 0.2);
+    padding: 10px;
+    margin: 8px 0;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    color: #ccc;
+    white-space: pre-wrap; /* Позволяет переносить длинные строки */
+    word-break: break-all; 
+}
 
         .slider { position: relative; width: 100%; margin: 1.5rem auto 0; } .slider-window { overflow: hidden; border-radius: 8px; border: 1px solid var(--border-color); aspect-ratio: 16 / 9; } .slider-track { display: flex; height: 100%; } .slide { min-width: 100%; flex-shrink: 0; opacity: 0.7; transform: scale(0.95); transition: opacity 0.5s ease, transform 0.5s ease; position: relative; } .slide.active-slide { opacity: 1; transform: scale(1); } .slide img { width: 100%; height: 100%; object-fit: cover; display: block; } .slider-btn { position: absolute; top: 50%; transform: translateY(-50%); background-color: rgba(10, 5, 20, 0.7); border: 1px solid var(--border-color); color: var(--primary-green); font-size: 2rem; cursor: pointer; width: 45px; height: 45px; border-radius: 50%; display: flex; justify-content: center; align-items: center; transition: all 0.3s ease; user-select: none; z-index: 10; } .slider-btn:hover { background-color: var(--accent-purple); color: #fff; } .slider-btn.prev { left: 10px; } .slider-btn.next { right: 10px; }
         footer { text-align: center; padding: 1.5rem 1rem; font-size: 0.8rem; color: var(--text-color); opacity: 0.5; border-top: 1px solid var(--border-color); margin-top: auto; }
@@ -136,6 +177,12 @@
             color: var(--text-color);
             opacity: 0.8;
         }
+        .firmware-description {
+            margin-top: 5px;
+            font-size: 0.75rem;
+            color: var(--text-color);
+            opacity: 0.7;
+        }
     </style>
 </head>
 <body>
@@ -163,7 +210,7 @@
                     <div id="auto-mode-content" class="mode-content active">
                         <div class="section-block">
                             <h3>1. Выберите готовую прошивку:</h3>
-                            <p>Выберите одну из официальных сборок. Файлы будут загружены из локальной папки <code>/bins</code> на сервере.</p>
+                            <p>Выберите одну из официальных сборок.</p>
                             <div class="option-grid" id="auto-firmware-grid">
                                 <div class="loading-message">
                                     <div class="loader"></div>
@@ -242,6 +289,42 @@
 <script>
 document.addEventListener('DOMContentLoaded', () => {
 
+    const normalizeGithubUrl = (url) => {
+        const githubBrowserUrlPattern = 'https://github.com/';
+        const badPathSegment = '/raw/refs/heads/';
+
+        if (url.startsWith(githubBrowserUrlPattern) && url.includes(badPathSegment)) {
+            const correctedUrl = url
+                .replace('github.com', 'raw.githubusercontent.com')
+                .replace(badPathSegment, '/');
+            
+            console.log(`URL исправлен: ${url} -> ${correctedUrl}`);
+            return correctedUrl;
+        }
+        
+        // Если URL уже правильный или с другого хоста, возвращаем как есть
+        return url;
+    };
+    
+    
+    
+
+
+    const logManifest = (manifest) => {
+        addLog("Манифест для прошивки сгенерирован:", "success");
+        
+        const pre = document.createElement('pre');
+        pre.className = 'log-manifest-details';
+        // Форматируем JSON с отступами в 2 пробела для читаемости
+        pre.textContent = JSON.stringify(manifest, null, 2);
+        
+        logPanel.appendChild(pre);
+        // Прокручиваем лог вниз, чтобы увидеть новый блок
+        logPanel.scrollTop = logPanel.scrollHeight;
+    };
+
+
+
     const installButton = document.getElementById('install-button');
     const flashButton = document.getElementById('flash-button');
     const logPanel = document.getElementById('log-panel');
@@ -251,13 +334,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const manualModeContent = document.getElementById('manual-mode-content');
     const autoFirmwareGrid = document.getElementById('auto-firmware-grid');
 
+    // URL к JSON файлу с данными о прошивках
+    const FIRMWARE_JSON_URL = 'https://raw.githubusercontent.com/QWEIVAN/HALCYON/main/deauther.json';
+    
     let currentMode = 'auto';
     let selectedChip = null;
     let firmwareSource = null;
     let availableFirmwares = [];
+    let downloadedFirmwares = new Map(); // Кэш для уже загруженных прошивок
 
-    const parseVersion = (filename) => {
-
+    const parseVersion = (versionString) => {
+        if (!versionString) return null;
+        
+        // Проверяем, если версия уже в формате "X.Y.Z"
+        const simpleParse = /^(\d+)\.(\d+)\.(\d+)$/.exec(versionString);
+        if (simpleParse) {
+            return {
+                major: parseInt(simpleParse[1], 10),
+                minor: parseInt(simpleParse[2], 10),
+                patch: parseInt(simpleParse[3], 10),
+                full: versionString
+            };
+        }
+        
+        // Ищем версию в имени файла
         const patterns = [
             /firm_(\d+)\.(\d+)\.(\d+)\.bin/i,         
             /firmware[_-]v?(\d+)\.(\d+)\.(\d+)\.bin/i, 
@@ -266,7 +366,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ];
 
         for (const pattern of patterns) {
-            const match = filename.match(pattern);
+            const match = versionString.match(pattern);
             if (match) {
                 return {
                     major: parseInt(match[1], 10),
@@ -288,16 +388,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return versionB.patch - versionA.patch;
     };
 
-    const guessChipFromFilename = (filename) => {
-        const lcFilename = filename.toLowerCase();
-        if (lcFilename.includes('esp32-s3') || lcFilename.includes('esp32s3')) return 'ESP32-S3';
-        if (lcFilename.includes('esp32-s2') || lcFilename.includes('esp32s2')) return 'ESP32-S2';
-        if (lcFilename.includes('esp32-c3') || lcFilename.includes('esp32c3')) return 'ESP32-C3';
-        if (lcFilename.includes('esp8266')) return 'ESP8266';
-        if (lcFilename.includes('esp32')) return 'ESP32';
-        return 'ESP32'; 
-    };
-
     const addLog = (message, type = 'info') => {
         const entry = document.createElement('div');
         entry.className = `log-entry ${type}`;
@@ -307,14 +397,14 @@ document.addEventListener('DOMContentLoaded', () => {
         logPanel.scrollTop = logPanel.scrollHeight;
     };
 
-    const createManifest = (chipFamily, firmwarePath) => {
+    const createManifest = (chipFamily, firmwareUrl) => {
         return {
             name: `Firmware for ${chipFamily}`,
             version: new Date().toLocaleDateString(),
             new_install_prompt_erase: true,
             builds: [{
                 chipFamily: chipFamily,
-                parts: [{ path: firmwarePath, offset: 0 }]
+                parts: [{ path: firmwareUrl, offset: 0 }]
             }]
         };
     };
@@ -344,81 +434,14 @@ document.addEventListener('DOMContentLoaded', () => {
         installButton.manifest = null;
         document.querySelectorAll('.grid-option.selected').forEach(el => el.classList.remove('selected'));
         document.getElementById('file-name').textContent = 'Файл не выбран...';
+        
+        // Принудительно очищаем значение инпута, чтобы можно было выбрать тот же файл снова
+        document.getElementById('firmware-manual-input').value = null;
+        
         updateFlashButtonState();
     };
 
-    const scanBinsDirectory = async () => {
-        try {
-
-            const response = await fetch('bins/');
-            if (!response.ok) {
-                throw new Error('Не удалось получить список файлов');
-            }
-
-            const html = await response.text();
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-
-            const binFiles = [];
-            doc.querySelectorAll('a').forEach(a => {
-                const href = a.getAttribute('href');
-                if (href && href.toLowerCase().endsWith('.bin')) {
-                    const filename = href.split('/').pop();
-                    binFiles.push({
-                        name: filename,
-                        path: `bins/${filename}`,
-                        chip: guessChipFromFilename(filename)
-                    });
-                }
-            });
-
-            if (binFiles.length === 0) {
-                throw new Error('Не найдено .bin файлов в директории');
-            }
-
-            return binFiles;
-        } catch (error) {
-            console.warn('Ошибка при сканировании директории:', error);
-
-            addLog('Не удалось получить список файлов напрямую. Пробуем альтернативный метод...', 'warning');
-
-            const filesToCheck = [
-                'firm_1.0.0.bin', 'firm_1.0.1.bin', 'firm_1.1.0.bin', 'firm_2.0.0.bin', 
-                'firm_2.1.0.bin', 'firm_2.1.3.bin', 'firm_3.0.0.bin', 'esp-monster-esp32.bin', 
-                'esp-monster-esp32s3.bin', 'esp32.bin', 'esp32s3.bin'
-            ];
-
-            const foundFiles = [];
-
-            for (const file of filesToCheck) {
-                try {
-                    const resp = await fetch(`bins/${file}`, { method: 'HEAD' });
-                    if (resp.ok) {
-                        foundFiles.push({
-                            name: file,
-                            path: `bins/${file}`,
-                            chip: guessChipFromFilename(file)
-                        });
-                    }
-                } catch (e) {
-
-                }
-            }
-
-            if (foundFiles.length > 0) {
-                return foundFiles;
-            }
-
-            return [
-                { name: "ESP-MONSTER для ESP32", chip: "ESP32", path: "bins/esp-monster-esp32.bin" },
-                { name: "ESP-MONSTER для ESP32-S3", chip: "ESP32-S3", path: "bins/esp-monster-esp32s3.bin" },
-                { name: "Firmware v2.1.3", chip: "ESP32", path: "bins/firm_2.1.3.bin" },
-                { name: "Firmware v1.9.5", chip: "ESP32", path: "bins/firm_1.9.5.bin" },
-                { name: "Firmware v2.0.0", chip: "ESP32", path: "bins/firm_2.0.0.bin" }
-            ];
-        }
-    };
-
+    // Функция для загрузки и отображения прошивок из JSON
     const loadAndDisplayFirmwares = async () => {
         autoFirmwareGrid.innerHTML = `
             <div class="loading-message">
@@ -428,49 +451,62 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         try {
-
-            const firmwares = await scanBinsDirectory();
-
-            firmwares.forEach(fw => {
-                const filename = fw.path.split('/').pop();
-                fw.version = parseVersion(filename);
-
-                if (fw.name === filename) {
-                    let displayName = "Прошивка";
-                    if (fw.name.toLowerCase().includes('esp32-s3') || fw.name.toLowerCase().includes('esp32s3')) {
-                        displayName = "Прошивка ESP32-S3";
-                    } else if (fw.name.toLowerCase().includes('esp32')) {
-                        displayName = "Прошивка ESP32";
-                    } else if (fw.name.toLowerCase().includes('esp8266')) {
-                        displayName = "Прошивка ESP8266";
-                    }
-                    fw.displayName = displayName;
-                } else {
-                    fw.displayName = fw.name;
-                }
-            });
-
-            firmwares.sort((a, b) => {
-                return compareVersions(a.version, b.version);
-            });
-
-            availableFirmwares = firmwares;
-
-            if (firmwares.length > 0) {
-                firmwares[0].isLatest = true;
+            // Загружаем JSON с информацией о прошивках
+            const response = await fetch(FIRMWARE_JSON_URL);
+            if (!response.ok) {
+                throw new Error(`Не удалось загрузить данные о прошивках (Статус: ${response.status})`);
             }
+
+            const data = await response.json();
+            
+            if (!data.firmwares || !Array.isArray(data.firmwares) || data.firmwares.length === 0) {
+                throw new Error('Некорректные данные в JSON-файле');
+            }
+
+            // Обрабатываем данные о прошивках
+            const firmwares = data.firmwares.map(fw => {
+                // Проверяем наличие обязательных полей
+                if (!fw.name || !fw.chip || !fw.url) {
+                    console.warn('Пропущена прошивка с неполными данными:', fw);
+                    return null;
+                }
+                
+                // Преобразуем объект версии, если она указана строкой
+                if (typeof fw.version === 'string') {
+                    fw.parsedVersion = parseVersion(fw.version);
+                }
+                
+                return fw;
+            }).filter(fw => fw !== null); // Удаляем null-элементы
+
+            // Сортируем по версиям, от новых к старым
+            firmwares.sort((a, b) => {
+                if (a.chip !== b.chip) {
+                    return a.chip.localeCompare(b.chip);
+                }
+                return compareVersions(a.parsedVersion, b.parsedVersion);
+            });
+
+            // Сохраняем для использования в других функциях
+            availableFirmwares = firmwares;
 
             renderFirmwareGrid(firmwares);
 
             addLog(`Найдено ${firmwares.length} прошивок`, 'success');
-            if (firmwares.length > 0 && firmwares[0].version) {
-                addLog(`Последняя версия: ${firmwares[0].version.full}`, 'info');
-            }
+            
+            // Показываем самые новые версии для каждого типа чипа
+            const chipTypes = [...new Set(firmwares.map(fw => fw.chip))];
+            chipTypes.forEach(chipType => {
+                const latestForChip = firmwares.find(fw => fw.chip === chipType);
+                if (latestForChip && latestForChip.version) {
+                    addLog(`Последняя версия для ${chipType}: ${latestForChip.version}`, 'info');
+                }
+            });
 
         } catch (error) {
             autoFirmwareGrid.innerHTML = `
-                <div class="error-message">
-                    Ошибка при загрузке списка прошивок: ${error.message}
+                <div class="error-message" style="color: var(--error-color); padding: 20px; text-align: center;">
+                    Ошибка при загрузке списка прошивок: ${error}
                 </div>
             `;
             addLog(`Ошибка: ${error.message}`, 'error');
@@ -485,63 +521,124 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // Группируем прошивки по типу чипа
+        const firmwaresByChip = {};
         firmwares.forEach(fw => {
-            const btn = document.createElement('div');
-            btn.className = 'grid-option';
-
-            if (fw.isLatest) {
-                btn.classList.add('latest-version');
+            if (!firmwaresByChip[fw.chip]) {
+                firmwaresByChip[fw.chip] = [];
             }
+            firmwaresByChip[fw.chip].push(fw);
+        });
 
-            let displayName = fw.displayName || fw.name;
-
-            let versionText = '';
-            if (fw.version) {
-
-                if (!displayName.includes(fw.version.full)) {
-                    versionText = `<span class="firmware-version">v${fw.version.full}</span>`;
-                }
+        // Создаем элементы для каждой прошивки, сгруппированные по чипу
+        Object.keys(firmwaresByChip).forEach(chipType => {
+            // Находим последнюю версию для этого чипа
+            firmwaresByChip[chipType].sort((a, b) => compareVersions(a.parsedVersion, b.parsedVersion));
+            
+            // Отмечаем самую новую версию для каждого чипа
+            if (firmwaresByChip[chipType].length > 0) {
+                firmwaresByChip[chipType][0].isLatest = true;
             }
+            
+            // Создаем кнопки для всех прошивок этого чипа
+            firmwaresByChip[chipType].forEach(fw => {
+                const btn = document.createElement('div');
+                btn.className = 'grid-option';
 
-            btn.innerHTML = `
-                ${fw.isLatest ? '<span class="version-badge">НОВАЯ</span>' : ''}
-                <div>${displayName}</div>
-                ${versionText}
-                <div class="firmware-info">${fw.chip}</div>
-            `;
-
-            btn.dataset.chip = fw.chip;
-            btn.dataset.path = fw.path;
-            btn.dataset.version = fw.version ? fw.version.full : '';
-
-            btn.addEventListener('click', () => {
-
-                document.querySelectorAll('#auto-firmware-grid .grid-option').forEach(el => 
-                    el.classList.remove('selected')
-                );
-
-                btn.classList.add('selected');
-
-                selectedChip = fw.chip;
-                firmwareSource = fw.path;
-
-                let logMessage = `Выбрана прошивка: ${displayName}`;
-                if (fw.version) {
-                    logMessage += ` (v${fw.version.full})`;
-                }
                 if (fw.isLatest) {
-                    logMessage += ' - последняя версия';
+                    btn.classList.add('latest-version');
                 }
-                addLog(logMessage, 'info');
 
-                const manifest = createManifest(selectedChip, firmwareSource);
-                installButton.manifest = createManifestUrl(manifest);
-                addLog('Манифест для прошивки сгенерирован', 'success');
+                
+btn.innerHTML = `
+    <div class="selection-checkmark">✓</div>
+    ${fw.isLatest ? '<span class="version-badge">НОВАЯ</span>' : ''}
+    <div>${fw.name}</div>
+    <span class="firmware-version">v${fw.version || 'unknown'}</span>
+    <div class="firmware-info">${fw.chip}</div>
+    ${fw.description ? `<div class="firmware-description">${fw.description}</div>` : ''}
+`;
 
-                updateFlashButtonState();
+
+                btn.dataset.chip = fw.chip;
+                btn.dataset.url = fw.url;
+                btn.dataset.version = fw.version || '';
+
+                btn.addEventListener('click', async () => {
+                    document.querySelectorAll('#auto-firmware-grid .grid-option').forEach(el => 
+                        el.classList.remove('selected')
+                    );
+
+                    btn.classList.add('selected');
+                    selectedChip = fw.chip;
+                    
+                    // Показываем индикатор загрузки
+                    const originalContent = btn.innerHTML;
+                    btn.innerHTML = `
+                        <div class="loader"></div> Загрузка прошивки...
+                    `;
+                    
+                    try {
+                        let firmwareUrl;
+                        
+                        // Проверяем, не загружали ли мы уже эту прошивку
+                        if (downloadedFirmwares.has(fw.url)) {
+                            firmwareUrl = downloadedFirmwares.get(fw.url);
+                            addLog('Используем ранее загруженную прошивку', 'info');
+                        } else {
+                            // Загружаем файл прошивки с GitHub
+                            const correctedUrl = normalizeGithubUrl(fw.url);
+        
+        // 2. Логируем исправленный URL для наглядности
+        addLog(`Загрузка прошивки с ${correctedUrl}`, 'info');
+        
+                            const firmwareResponse = await fetch(correctedUrl);
+                            if (!firmwareResponse.ok) {
+                                throw new Error(`Не удалось загрузить файл прошивки (Статус: ${firmwareResponse.status})`);
+                            }
+                            
+                            const firmwareBlob = await firmwareResponse.blob();
+                            firmwareUrl = URL.createObjectURL(firmwareBlob);
+                            
+                            // Сохраняем в кэш
+                            downloadedFirmwares.set(fw.url, firmwareUrl);
+                        }
+                        
+                        firmwareSource = firmwareUrl;
+                        
+                        // Возвращаем оригинальное содержимое кнопки
+                        btn.innerHTML = originalContent;
+                        
+                        let logMessage = `Выбрана прошивка: ${fw.name}`;
+                        if (fw.version) {
+                            logMessage += ` (v${fw.version})`;
+                        }
+                        if (fw.isLatest) {
+                            logMessage += ' - последняя версия';
+                        }
+                        addLog(logMessage, 'success');
+
+                        const manifest = createManifest(selectedChip, firmwareSource);
+                        installButton.manifest = createManifestUrl(manifest);
+                        logManifest(manifest); 
+
+                        
+
+                        updateFlashButtonState();
+                        
+                    } catch (error) {
+                        // Возвращаем оригинальное содержимое кнопки в случае ошибки
+                        btn.innerHTML = originalContent;
+                        btn.classList.remove('selected');
+                        addLog(`Ошибка загрузки прошивки: ${error.message}`, 'error');
+                        selectedChip = null;
+                        firmwareSource = null;
+                        updateFlashButtonState();
+                    }
+                });
+
+                autoFirmwareGrid.appendChild(btn);
             });
-
-            autoFirmwareGrid.appendChild(btn);
         });
     };
 
@@ -580,6 +677,13 @@ document.addEventListener('DOMContentLoaded', () => {
             option.classList.add('selected');
             selectedChip = option.dataset.chip;
             addLog(`Выбрано устройство: ${selectedChip}`, 'info');
+            
+            if (firmwareSource && firmwareSource instanceof File) {
+                const manifest = createManifest(selectedChip, URL.createObjectURL(firmwareSource));
+                installButton.manifest = createManifestUrl(manifest);
+                logManifest(manifest); 
+
+            }
             updateFlashButtonState();
         });
     });
@@ -603,24 +707,28 @@ document.addEventListener('DOMContentLoaded', () => {
             if (selectedChip) {
                 const manifest = createManifest(selectedChip, URL.createObjectURL(firmwareSource));
                 installButton.manifest = createManifestUrl(manifest);
-                addLog("Манифест для ручного режима сгенерирован.", "success");
+                logManifest(manifest); 
+
             }
         }
         updateFlashButtonState();
     });
 
+    // Обработчики событий для ESP Web Tools
     installButton.addEventListener("error", (e) => addLog(`ОШИБКА: ${e.detail.message}`, "error"));
     installButton.addEventListener("connected", () => addLog("Устройство успешно подключено.", "success"));
     installButton.addEventListener("progress", (e) => addLog(`Запись... ${Math.round(e.detail.progress * 100)}%`));
     installButton.addEventListener("finished", () => addLog("Прошивка успешно завершена!", "success"));
     installButton.addEventListener("disconnected", () => addLog("Устройство отключено."));
 
+    // Обработчики для вкладок
     document.querySelectorAll('.tab-button').forEach(button => button.onclick = () => {
         document.querySelectorAll('.tab-button, .tab-content').forEach(el => el.classList.remove('active'));
         button.classList.add('active');
         document.getElementById(button.dataset.tab)?.classList.add('active');
     });
 
+    // Инициализация слайдера
     const slider = document.querySelector('.slider');
     if (slider) {
         const track = slider.querySelector('.slider-track');
@@ -634,6 +742,7 @@ document.addEventListener('DOMContentLoaded', () => {
         slider.querySelector('.prev').onclick = () => { currentIndex = (currentIndex - 1 + slides.length) % slides.length; updateSlides(); };
     }
 
+    // Модальное окно с каналами Telegram
     const modal = document.getElementById('channelsModal');
     const showChannelsBtn = document.getElementById('showChannelsBtn');
     const channelsGrid = modal.querySelector('.channels-grid');
@@ -674,6 +783,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Начать с режима Auto
     switchMode('auto');
 });
 </script>
